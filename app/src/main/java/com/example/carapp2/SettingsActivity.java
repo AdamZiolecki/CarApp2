@@ -1,10 +1,19 @@
 package com.example.carapp2;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -22,6 +31,7 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
@@ -30,7 +40,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     Switch fullscreenSwitch, screenAlwaysOnSwitch, emailSwitch;
     EditText emailEditText;
-    Button resetButton;
+    Button resetButton, setBackgroundButton;
     SharedPreferences pref;
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT_WATCH)
@@ -48,6 +58,7 @@ public class SettingsActivity extends AppCompatActivity {
         emailSwitch = (Switch) findViewById(R.id.emailSwitch);
         emailEditText = (EditText) findViewById(R.id.emailEditText);
         resetButton = (Button) findViewById(R.id.resetButton);
+        setBackgroundButton = (Button) findViewById(R.id.setBackgroundButton);
 
         pref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         final SharedPreferences.Editor editor = pref.edit();
@@ -129,10 +140,36 @@ public class SettingsActivity extends AppCompatActivity {
                 dialog.show();
             }
         });
+
+        setBackgroundButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(SettingsActivity.this, SelectBackgroundActivity.class);
+                startActivityForResult(intent, 1);
+            }
+        });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case (1): {
+                if (resultCode == Activity.RESULT_OK) {
+                    String newBackgroundName = data.getStringExtra("backgroundName");
+                    newBackgroundName = newBackgroundName.replace("_t.jpg", "");
+                    newBackgroundName = newBackgroundName.replace("_t.png", "");
+
+                    final SharedPreferences.Editor editor = pref.edit();
+                    editor.putString("background", newBackgroundName);
+                    editor.apply();
+                }
+            }
+            break;
+        }
     }
 
     private void loadPreferences() {
-        System.out.println("Before read preferences");
         pref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
         fullscreenSwitch.setChecked(pref.getBoolean("fullscreenMode", false));

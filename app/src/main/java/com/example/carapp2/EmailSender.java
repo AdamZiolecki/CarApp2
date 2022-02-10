@@ -16,8 +16,8 @@ import javax.mail.internet.MimeMessage;
 
 public class EmailSender extends AsyncTask<Void, Void, Void> {
     final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
-    private String username = "bot9051@gmail.com";  // hardcoded
-    private String password = "password";           // hardcoded
+    private String username = "****";  // hardcoded
+    private String password = "****";  // hardcoded
     Properties props;
     Session session;
 
@@ -62,15 +62,11 @@ public class EmailSender extends AsyncTask<Void, Void, Void> {
             msg.setText(text);
             msg.setSentDate(new Date());
             Transport.send(msg);
-            System.out.println("Message sent.");
-        } catch (MessagingException e) {
-            System.out.println("Error case: " + e);
-        }
+        } catch (MessagingException e) { }
     }
 
     @Override
     protected Void doInBackground(Void... voids) {
-        System.out.println("EmailSender doInBackground");
         try {
             session = Session.getDefaultInstance(props,
                     new Authenticator() {
@@ -90,10 +86,7 @@ public class EmailSender extends AsyncTask<Void, Void, Void> {
             msg.setText(text);
             msg.setSentDate(new Date());
             Transport.send(msg);
-            System.out.println("Message sent.");
-        } catch (MessagingException e) {
-            System.out.println("Error case: " + e);
-        }
+        } catch (MessagingException e) { }
         return null;
     }
 }

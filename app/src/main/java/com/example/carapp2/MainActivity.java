@@ -1,11 +1,16 @@
 package com.example.carapp2;
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -18,8 +23,14 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
+import android.nfc.Tag;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
@@ -27,6 +38,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,12 +50,14 @@ import java.util.List;
 
 import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
     final String PRIMARY_BTN_NAME = "btnImage";
     final int NUMBER_OF_BUTTONS = 7;
 
     SharedPreferences pref;
+
+    ConstraintLayout mainActivityLayout;
 
     List<ImageButton> imgBtnList = new ArrayList<ImageButton>();
     int currentBtnClicked = -1;
@@ -56,10 +70,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        System.out.println("MainActivity onCreate");
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        mainActivityLayout = findViewById(R.id.mainActivityLayout);
 
         this.getSupportActionBar().hide();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
@@ -99,6 +110,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     1.0f
             ));
             btn.setOnClickListener(this);
+            btn.setOnLongClickListener(this);
 
             imgBtnList.add(btn);
             if (i < ((NUMBER_OF_BUTTONS + 1) / 2)) {
@@ -112,12 +124,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tableLayout.addView(tableRowBot);
 
         loadPreferences();
+
+        startService(new Intent(this, BackgroundService.class));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        System.out.println("MainActivity onResume()");
 
         if(pref.getBoolean("fullscreenMode", false)) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -131,12 +144,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+        String backgroundName = pref.getString("background", "bg1");
+        int resId = getResources().getIdentifier(backgroundName, "drawable", getPackageName());
+        mainActivityLayout.setBackgroundResource(resId);
 
         loadPreferences();
     }
 
     private void loadPreferences() {
-        System.out.println("Before read preferences");
         pref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
         for (int i = 0; i < NUMBER_OF_BUTTONS; ++i) {
@@ -153,7 +168,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void onClick(final View v) {
-        System.out.println("Button Clicked id = " + v.getId());
         currentBtnClicked = v.getId();
 
         if (currentBtnClicked == NUMBER_OF_BUTTONS) {   // Settings button
@@ -175,6 +189,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startActivityForResult(intent, 1);
             }
         }
+    }
+
+    @Override
+    public boolean onLongClick(View view) {
+        currentBtnClicked = view.getId();
+        if (currentBtnClicked == NUMBER_OF_BUTTONS) {   // Settings button
+            return false;
+        }
+
+        String packageName = pref.getString("packageName" + currentBtnClicked, "");
+        if (packageName != "") {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setMessage("Czy jesteś pewien, że chcesz usunąć skrót do aplikacji?");
+
+            builder.setPositiveButton("Tak", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int k) {
+                    final SharedPreferences.Editor editor = pref.edit();
+                    editor.putString("packageName" + currentBtnClicked, "");
+                    editor.putString("path" + currentBtnClicked, "");
+                    editor.apply();
+                    onResume();
+                }
+            });
+
+            builder.setNegativeButton("Nie", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    // Do nothing
+                }
+            });
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+        return true;
     }
 
     @Override
@@ -205,7 +255,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private String saveToInternalStorage(Bitmap bitmapImage, String name){
-        System.out.println("saveToInternalStorage");
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
         // path to /data/data/yourapp/app_data/imageDir
         File directory = cw.getDir("imageDir", Context.MODE_PRIVATE);
@@ -232,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void loadImageFromStorage(String path, String name, int btnId)
     {
         try {
-            File f=new File(path, name);
+            File f = new File(path, name);
             Bitmap b = BitmapFactory.decodeStream(new FileInputStream(f));
             imgBtnList.get(btnId).setImageBitmap(b);
         }
@@ -260,5 +309,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         canvas.drawBitmap(secondImageScaled, centreX, centreY, null);
         return result;
     }
-
 }

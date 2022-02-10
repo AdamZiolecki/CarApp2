@@ -8,7 +8,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACTION_MANAGE_OVERLAY_PERMISSION" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.Manifest.permission#CONTROL_INCALL_EXPERIENCE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:allowBackup="true"
@@ -20,18 +25,39 @@
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <receiver android:name=".OnPowerReceiver">
             <intent-filter>
-                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
-                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="rating" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name=".DeviceAdmin"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN" >
+            <meta-data
+                android:name= "android.app.device_admin"
+                android:resource= "@xml/policies"/>
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
+<!--        <service-->
+<!--            android:name=".PowerConnectionService"-->
+<!--            android:stopWithTask="false" />-->
+        <service
+            android:name=".BackgroundService"
+            android:stopWithTask="false" />
+
+        <!-- If set to true,
+        this service with be automatically stopped when the user remove a task rooted in an activity owned by the application-->
         <activity android:name="com.example.carapp2.InstalledAppListActivity"></activity>
         <activity android:name="com.example.carapp2.SettingsActivity"></activity>
+        <activity android:name="com.example.carapp2.SelectBackgroundActivity"></activity>
     </application>
 
 </manifest>
